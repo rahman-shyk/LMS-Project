@@ -1,0 +1,20 @@
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import { requireAuth } from './middleware/auth.js';
+import { errorHandler, notFound } from './middleware/errors.js';
+import { router } from './routes.js';
+import { authRouter } from './auth-routes.js';
+
+export const app=express();
+app.disable('x-powered-by');
+app.use(helmet());
+app.use(cors({ origin: (process.env.CORS_ORIGIN || 'http://localhost:5173').split(',').map(v => v.trim()), credentials: true }));
+app.use(express.json({ limit: '1mb' }));
+app.get('/health', (_req,res)=>res.json({ data: { status: 'ok' } }));
+app.use('/api/v1', rateLimit({ windowMs: 60_000, limit: 120, standardHeaders: 'draft-8', legacyHeaders: false }));
+app.use('/api/v1/auth', authRouter);
+app.use('/api/v1', requireAuth, router);
+app.use(notFound);
+app.use(errorHandler);
